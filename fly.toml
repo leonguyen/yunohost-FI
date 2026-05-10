@@ -1,9 +1,8 @@
 app = "yunohost-fly"
-
 primary_region = "sin"
 
 kill_signal = "SIGINT"
-kill_timeout = 120
+kill_timeout = "120s"
 
 [build]
   dockerfile = "Dockerfile"
@@ -11,22 +10,18 @@ kill_timeout = 120
 [env]
   YUNOHOST_DOMAIN = "example.com"
 
-[[mounts]]
+[mounts]
   source = "yunodata"
   destination = "/var"
 
-[[services]]
+[[http_service]]
   internal_port = 80
-  protocol = "tcp"
+  force_https = true
+  auto_stop_machines = false
+  auto_start_machines = true
+  min_machines_running = 1
 
-  [[services.ports]]
-    port = 80
-    handlers = ["http"]
-
-  [[services.ports]]
-    port = 443
-    handlers = ["tls", "http"]
-
-  [[services.tcp_checks]]
-    interval = "15s"
-    timeout = "5s"
+[[vm]]
+  memory = "2048"
+  cpu_kind = "shared"
+  cpus = 2
