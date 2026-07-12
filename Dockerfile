@@ -1,26 +1,34 @@
-FROM debian:12
+FROM debian:bookworm-slim
 
 ENV DEBIAN_FRONTEND=noninteractive
-ENV container=docker
 
+# Install systemd, curl, and networking requirements
+RUN apt-get update && apt-get install -y \
+    systemd \
+    systemd-sysv \
+    curl \
+    ca-certificates \
+    sudo \
+    gnupg \
+    iptables \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+
+# Prevent systemd from trying to load unnecessary physical hardware modules
+RUN rm -f /lib/systemd/system/multi-user.target.wants/* \
+    /etc/systemd/system/*.wants/* \
+    /lib/systemd/system/local-fs.target.wants/* \
+    /lib/systemd/system/sockets.target.wants/*udev* \
+    /lib/systemd/system/sockets.target.wants/*initctl* \
+    /lib/systemd/system/basic.target.wants/* \
+    /lib/systemd/system/anaconda.target.wants/*
+
+# Create the YunoHost installation script hook to run during container boot if not installed
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+# Inform systemd it is running in a container context
 STOPSIGNAL SIGRTMIN+3
-
-RUN apt-get update && \
-    apt-get install -y \
-    systemd systemd-sysv dbus sudo curl wget gnupg2 \
-    ca-certificates lsb-release locales && \
-    apt-get clean
-
 VOLUME [ "/sys/fs/cgroup" ]
 
-RUN mkdir -p /etc/systemd/system/sysinit.target.wants && \
-    ln -sf /lib/systemd/system/systemd-tmpfiles-setup.service \
-    /etc/systemd/system/sysinit.target.wants/systemd-tmpfiles-setup.service
-
-RUN curl https://install.yunohost.org | bash
-
-RUN systemctl disable systemd-resolved.service || true
-
-EXPOSE 80 443
-
-CMD ["/sbin/init"]
+ENTRYPOINT ["/entrypoint.sh"]
